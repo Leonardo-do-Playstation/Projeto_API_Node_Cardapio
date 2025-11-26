@@ -1,96 +1,60 @@
 import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
-import cors from 'cors';
 
 const app = express();
-app.use(express.json()); // API aceita JSON
+app.use(express.json()); // API vai aceitar json
 
-app.use(cors({
-  origin: 'http://localhost:4200', // URL do angular
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false
-}))
+//Conectar no MongoDB
+mongoose.connect(process.env.MONGODB_URI,{dbName:'Cardapio'})
+.then(()=>console.log('Conectado ao MongoDB'))
+.catch(err=>console.error('Erro na conexão:',err.message));
 
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'Aula' })
-  .then(() => console.log('MongoDB conectado'))
-  .catch(err => console.error('Erro ao conectar ao MongoDB', err));
+//Modelo Prato
+const pratoSchema = new mongoose.Schema({
+  nome: {type: String, required: true, trim: true, minlength:2},
+  preco: {type: Number, required: true},
+  descricao: {type: String}
+},{collection: 'pratos',timestamps:true});
+const Prato = mongoose.model('Prato',pratoSchema,'pratos');
 
-const alunosSchema = new mongoose.Schema({
-  nome: { type: String, required: true, trim: true, minlength: 2 },
-  idade: { type: Number, required: true, min: 0, max: 120 },
-  curso: { type: String, required: true, trim: true },
-  notas: { type: [Number], default: [], validate: v => v.every(n => n >= 0 && n <= 10) }
-}, { collection: 'Alunos', timestamps: true });
-const Aluno = mongoose.model('Aluno', alunosSchema, 'Alunos');
+//Modelo Refrigerante
+const refriSchema = new mongoose.Schema({
+  nome: {type: String, required: true, trim: true, minlength:2},
+  preco: {type: Number, required: true},
+  descricao: {type: String, required: true, trim: true}
+},{collection: 'refrigerante', timestamps: true});
+const Refrigerante = mongoose.model('Refrigerante',refriSchema,'Refrigerantes');
 
-// Rotas inicial
-app.get('/', async(req, res) => res.json({ msg: 'API rodando'}));
+//Rota inicial
+app.get('/',(req,res)=>res.json({msg:'API rodando'}));
 
-//Criar aluno
-app.post('/alunos', async (req, res) => {
-    const alunos = await Aluno.create(req.body);
-    res.status(201).json(alunos);
+//Criar Prato
+app.post('/pratos',async(req,res)=>{
+  const pratos = await Prato.create(req.body);
+  res.status(201).json(pratos);
 });
 
-// Listar alunos
-app.get('/alunos', async (req, res) => {
-    const alunos = await Aluno.find();
-    res.json(alunos);
+//Criar refrigerante
+app.post('/refrigerantes',async(req,res)=>{
+  const refrigerante = await Refrigerante.create(req.body);
+  res.status(201).json(refrigerante);
 });
 
-app.put('/alunos/:id', async (req, res) => {
-    try {
-      if (!mongoose.isValidObjectId(req.params.id)) {
-        return res.status(400).json({ error: 'ID inválido' });
-      }
-      const aluno = await Aluno.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        { new: true, runValidators: true, overwrite: true }
-      );
-
-      if (!aluno) return res.status(404).json({ error: 'Aluno não encontrado' });
-      res.json(aluno);
-
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
+//Listas pratos
+app.post('/pratos',async(req,res)=>{
+  const pratos = await Prato.find();
+  res.json(pratos);
 });
 
-app.delete('/alunos/:id', async (req, res) => {
-    try {
-      if (!mongoose.isValidObjectId(req.params.id)) {
-        return res.status(400).json({ error: 'ID inválido' });
-      }
-
-      const aluno = await Aluno.findByIdAndDelete(req.params.id);
-
-      if (!aluno) return res.status(404).json({ error: 'Aluno não encontrado' });
-      res.json({ ok: true });
-
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
+//Listar refrigerantes
+app.post('/refrigerantes',async(req,res)=>{
+  const refrigerantes = await Refrigerante.find();
+  res.json(refrigerantes);
 });
 
-app.get('/alunos/:id', async (req, res) => {
-    try {
-      if (!mongoose.isValidObjectId(req.params.id)) {
-        return res.status(400).json({ error: 'ID inválido' });
-      }
-
-      const aluno = await Aluno.findById(req.params.id);
-      if (!aluno) return res.status(404).json({ error: 'Aluno não encontrado' });
-      res.json(aluno);
-
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-});
-
-// Iniciar servidor
-app.listen(process.env.PORT, () => 
-    console.log(`Servidor rodando em http://localhost:${process.env.PORT}`)
+//Iniciar servidor
+app.listen(process.env.PORT,()=>
+  console.log(`Servidor rodando em http://localhost:${process.env.PORT}`)
 );
+
